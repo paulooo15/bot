@@ -1,0 +1,6 @@
+discord.py
+groq
+nest_asyncio
+googlesearch-python
+beautifulsoup4
+requests

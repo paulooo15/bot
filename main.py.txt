@@ -1,0 +1,53 @@
+import os
+import discord
+from groq import Groq
+import nest_asyncio
+import asyncio
+import time
+from datetime import timedelta
+
+nest_asyncio.apply()
+
+# --- CONFIGURAÇÕES PROTEGIDAS ---
+# Agora as duas chaves são puxadas das variáveis da Cloud (Koyeb/Render/Railway)
+TOKEN_DISCORD = os.getenv('DISCORD_TOKEN') 
+CHAVE_GROQ = os.getenv('GROQ_API_KEY') 
+MODEL_NAME = "meta-llama/llama-4-scout-17b-16e-instruct" 
+
+start_time = time.time()
+intents = discord.Intents.default()
+intents.message_content = True
+bot = discord.Client(intents=intents)
+
+def get_uptime():
+    uptime_seconds = int(time.time() - start_time)
+    return str(timedelta(seconds=uptime_seconds))
+
+@bot.event
+async def on_ready():
+    print(f'✅ Bot Online. Uptime: {get_uptime()}')
+
+@bot.event
+async def on_message(message):
+    if message.author.bot: return
+    
+    if bot.user.mentioned_in(message) or isinstance(message.channel, discord.DMChannel):
+        try:
+            client_groq = Groq(api_key=CHAVE_GROQ)
+            completion = client_groq.chat.completions.create(
+                messages=[{"role": "user", "content": message.content}],
+                model=MODEL_NAME,
+            )
+            response = completion.choices[0].message.content
+            await message.reply(response)
+        except Exception as e:
+            await message.reply(f"Erro na IA: Verifique a GROQ_API_KEY nas variáveis.")
+
+async def main():
+    if not TOKEN_DISCORD or not CHAVE_GROQ:
+        print("❌ Erro: Faltam variáveis de ambiente (DISCORD_TOKEN ou GROQ_API_KEY)!")
+        return
+    await bot.start(TOKEN_DISCORD)
+
+if __name__ == "__main__":
+    asyncio.run(main())
